@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["John 'asceth' Long", "Jason Dew"]
   s.email       = ["jasondew@gmail.com", "machinist@asceth.com"]
-  s.homepage    = "http://github.com/jasondew/cached_names"
+  s.homepage    = "http://github.com/asceth/cached_names"
   s.summary     = "Cached names of static data for use in selects"
   s.description = "A gem for caching static data for use in selects"
 
