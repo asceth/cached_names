@@ -1,4 +1,4 @@
-class CachedNames
+module CachedNames
 
   def has_cached_names name_method = "value", options = {}
     @cached_names_name_method = name_method
