@@ -7,8 +7,8 @@ module CachedNames
     @cached_names_cache_key_prefix = "cached_names_#{self}"
     @cached_names_loaded = false
 
-    after_save { self.load_cached_names }
-    after_destroy { self.load_cached_names }
+    after_save { self.class.load_cached_names }
+    after_destroy { self.class.load_cached_names }
 
     load_cached_names
   end
