@@ -4,7 +4,7 @@ module CachedNames
       if defined?(ActiveRecord)
         ActiveRecord::Base.send :extend, CachedNames
         if defined?(ActsAsParanoid)
-          ActiveRecord::Base.send :extend, CachedNames::Paranoid
+          ActiveRecord::Base.send :extend, CachedNames::ParanoidMethods
           CachedNames.paranoid_loaded = true
         end
       end

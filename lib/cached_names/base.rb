@@ -1,8 +1,11 @@
 module CachedNames
 
   @@paranoid_loaded ||= false
-  def paranoid_loaded=(value)
+  def self.paranoid_loaded=(value)
     @@paranoid_loaded = value
+  end
+  def self.paranoid_loaded
+    @@paranoid_loaded
   end
 
   def has_cached_names name_method = "value", options = {}
@@ -16,6 +19,7 @@ module CachedNames
     after_destroy { self.class.load_cached_names }
 
     load_cached_names
+    load_paranoid_cached_names if CachedNames.paranoid_loaded
   end
 
   def names
@@ -44,8 +48,8 @@ module CachedNames
     begin
       @cached_names_instances = all(:order => @cached_names_sort_field)
 
-      load_names
-      load_grouped_names if @cached_names_group_method
+      load_names(@cached_names_instances)
+      load_grouped_names(@cached_names_instances) if @cached_names_group_method
 
       @cached_names_loaded = true
     rescue Exception => e
