@@ -1,5 +1,10 @@
 module CachedNames
 
+  @@paranoid_loaded ||= false
+  def paranoid_loaded=(value)
+    @@paranoid_loaded = value
+  end
+
   def has_cached_names name_method = "value", options = {}
     @cached_names_name_method = name_method
     @cached_names_sort_field = options[:sorted_by] || @cached_names_name_method
@@ -17,21 +22,10 @@ module CachedNames
     load_cached_names unless @cached_names_loaded
 
     begin
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names"
+      Rails.cache.read cache_key
     rescue
       load_cached_names
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names"
-    end
-  end
-
-  def names_with_deleted
-    load_cached_names unless @cached_names_loaded
-
-    begin
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names_with_deleted"
-    rescue
-      load_cached_names
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names_with_deleted"
+      Rails.cache.read cache_key
     end
   end
 
@@ -39,27 +33,16 @@ module CachedNames
     load_cached_names unless @cached_names_loaded
 
     begin
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names_group_#{key}"
+      Rails.cache.read group_cache_key(key)
     rescue
       load_cached_names
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names_group_#{key}"
-    end
-  end
-
-  def names_group_with_deleted key
-    load_cached_names unless @cached_names_loaded
-
-    begin
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names_group_#{key}_with_deleted"
-    rescue
-      load_cached_names
-      Rails.cache.read "#{@cached_names_cache_key_prefix}_names_group_#{key}_with_deleted"
+      Rails.cache.read group_cache_key(key)
     end
   end
 
   def load_cached_names
     begin
-      @cached_names_instances = all(:with_deleted => true, :order => @cached_names_sort_field)
+      @cached_names_instances = all(:order => @cached_names_sort_field)
 
       load_names
       load_grouped_names if @cached_names_group_method
@@ -74,20 +57,18 @@ module CachedNames
 
   private
 
-  def load_names
-    names = @cached_names_instances.map {|i| [i.deleted?, [i.send(@cached_names_name_method), i.id]] }
-    all_names, non_deleted_names = partition_by_deleted names
+  def load_names(cached_instances, cache_suffix = 'names')
+    all_names = cached_instances.map {|i| [i.send(@cached_names_name_method), i.id] }
 
-    Rails.cache.write "#{@cached_names_cache_key_prefix}_names_with_deleted", all_names
-    Rails.cache.write "#{@cached_names_cache_key_prefix}_names", non_deleted_names
+    Rails.cache.write cache_key(cache_suffix), all_names
   end
 
-  def load_grouped_names
-    groups = @cached_names_instances.inject({}) do |groups, instance|
+  def load_grouped_names(cached_instances, cache_suffix = 'names_group')
+    groups = cached_instances.inject({}) do |groups, instance|
       value = instance.send(@cached_names_group_method)
 
       groups[value] ||= []
-      groups[value] << [instance.deleted?, [instance.send(@cached_names_name_method), instance.id]]
+      groups[value] << [instance.send(@cached_names_name_method), instance.id]
 
       groups
     end
@@ -96,18 +77,18 @@ module CachedNames
     universal_names = groups[nil] || []
 
     groups.each do |(key, names)|
-      all_names, non_deleted_names = partition_by_deleted(names + universal_names)
+      all_names = names + universal_names
 
-      Rails.cache.write "#{@cached_names_cache_key_prefix}_names_group_#{key}_with_deleted", all_names
-      Rails.cache.write "#{@cached_names_cache_key_prefix}_names_group_#{key}", non_deleted_names
+      Rails.cache.write group_cache_key(key, cache_suffix), all_names
     end
   end
 
-  def partition_by_deleted names
-    all_names = names.map {|(deleted, name_id_pair)| name_id_pair }
-    non_deleted_names = names.map {|(deleted, name_id_pair)| name_id_pair unless deleted }.compact
+  def cache_key(cache_suffix = 'names')
+    "#{@cached_names_cache_key_prefix}_#{cache_suffix}"
+  end
 
-    [all_names, non_deleted_names]
+  def group_cache_key(key, cache_suffix = 'names_group')
+    "#{@cached_names_cache_key_prefix}_#{key}_#{cache_suffix}"
   end
 end
 
